@@ -130,7 +130,7 @@ describe("invocationCommand", () => {
         "--sandbox",
         "workspace",
         "--tools",
-        "read_file,grep,list_dir,run_terminal_cmd,search_replace",
+        "read_file,grep,list_dir,run_terminal_cmd,search_replace,write",
       ])
     );
     expect(grok.args).not.toContain("--always-approve");
@@ -149,7 +149,7 @@ describe("invocationCommand", () => {
     );
   });
 
-  it("pre-approves Grok shell commands only for writers", () => {
+  it("pre-approves Grok shell commands and file edits only for writers", () => {
     const reader = invocationCommand(
       options({ provider: "grok", model: "grok-4.6", mode: "read-only" })
     );
@@ -157,8 +157,10 @@ describe("invocationCommand", () => {
     const writer = invocationCommand(
       options({ provider: "grok", model: "grok-4.6", mode: "isolated-write" })
     );
-    expect(writer.args.filter((arg) => arg === "--allow")).toHaveLength(1);
-    expect(writer.args[writer.args.indexOf("--allow") + 1]).toBe("Bash");
+    const rules = writer.args.flatMap((arg, index) =>
+      arg === "--allow" ? [writer.args[index + 1]] : []
+    );
+    expect(rules).toEqual(["Bash", "Edit"]);
   });
 
   it("covers low, medium, and high for every external provider", () => {
