@@ -17,6 +17,7 @@ import {
   reportedModelMatches,
 } from "./parse-output.ts";
 import type {
+  AccessMode,
   Provider,
   ReceiptStatus,
   RunnerOptions,
@@ -133,10 +134,47 @@ const CLAUDE_IDENTITY = [
   "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
 ] as const;
 
+const GROK_WRITER_ENV = new Set([
+  "PATH",
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "TMPDIR",
+  "LANG",
+  "TERM",
+  "COLORTERM",
+  "TZ",
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY",
+  "ALL_PROXY",
+  "http_proxy",
+  "https_proxy",
+  "no_proxy",
+  "all_proxy",
+  "SSL_CERT_FILE",
+  "SSL_CERT_DIR",
+  "NODE_EXTRA_CA_CERTS",
+]);
+
+const GROK_WRITER_ENV_PREFIXES = ["LC_", "XDG_", "GROK_", "XAI_"] as const;
+
+function grokWriterInherits(key: string): boolean {
+  return GROK_WRITER_ENV.has(key)
+    || GROK_WRITER_ENV_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
 export function childEnvironment(
   provider: Provider,
+  mode: AccessMode,
   source: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
+  if (provider === "grok" && mode === "isolated-write") {
+    return Object.fromEntries(
+      Object.entries(source).filter(([key]) => grokWriterInherits(key))
+    );
+  }
   const result = { ...source };
   const remove = provider === "claude"
     ? CODEX_IDENTITY
@@ -539,7 +577,7 @@ async function executeLane(
 ): Promise<RunResult> {
   const startedAt = new Date(started).toISOString();
   const prompt = readFileSync(options.promptPath, "utf8");
-  const env = childEnvironment(options.provider);
+  const env = childEnvironment(options.provider, options.mode);
   const executable = Bun.which(invocation.command, {
     PATH: env.PATH,
     cwd: options.cwd,
