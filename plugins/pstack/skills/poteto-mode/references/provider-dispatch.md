@@ -71,6 +71,8 @@ Grok authentication preflight has one bounded retry. If the first `grok models` 
 
 The parent tool sandbox still governs whether a subscribed child CLI can reach its credentials and network. Run setup's live probe from the actual parent profile. A blocked external CLI is a loud dropout, not a reason to elevate permissions or substitute a model silently.
 
+Grok lanes cannot start under a sandboxed Codex parent on macOS. In `read-only` or `workspace-write` without network, `grok models` cannot reach the API and lists only its built-in models, so the preflight records `unavailable-model` for a current model. With network access, Grok refuses to start because it cannot apply its own sandbox profile inside Codex's ("could not apply the 'workspace' sandbox profile"), and the receipt records `child-failed`. macOS sandboxes do not nest. A Codex parent that routes any role to `grok:*` must itself run with `danger-full-access`, chosen deliberately in the user's Codex profile. Grok's own `read-only` or `workspace` sandbox still confines the lane. Setup's live probe from that profile shows which case applies. Do not escalate the parent to get past either failure.
+
 The parent invocation must itself be resumable background work:
 
 - Claude Code: call the launcher through a Bash tool invocation with `run_in_background: true` and retain its task ID. A foreground Bash tool call has an automatic ten-minute ceiling even when the runner's own timeout is longer. Shelling out with `&` and losing the task handle is not equivalent.
