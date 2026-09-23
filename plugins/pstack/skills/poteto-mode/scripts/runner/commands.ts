@@ -51,8 +51,12 @@ function grokSandbox(mode: AccessMode): string {
 }
 
 function grokTools(mode: AccessMode): string {
-  const readonly = ["read_file", "grep", "list_dir", "run_terminal_cmd"];
+  const readonly = ["read_file", "grep", "list_dir", "run_terminal_command"];
   return [...readonly, ...(mode === "isolated-write" ? ["search_replace"] : [])].join(",");
+}
+
+function grokPermissionRules(mode: AccessMode): readonly string[] {
+  return mode === "isolated-write" ? ["--allow", "Bash"] : [];
 }
 
 function permissionMode(mode: AccessMode): string {
@@ -130,6 +134,7 @@ export function invocationCommand(options: RunnerOptions): CommandSpec {
           options.effort,
           "--permission-mode",
           permissionMode(options.mode),
+          ...grokPermissionRules(options.mode),
           "--sandbox",
           grokSandbox(options.mode),
           "--tools",

@@ -11,7 +11,11 @@ import {
 import { dirname, resolve } from "node:path";
 import { invocationCommand, preflightCommand, type CommandSpec } from "./commands.ts";
 import { versionedClaudeAlias } from "./model-aliases.ts";
-import { parseProviderOutput, reportedModelMatches } from "./parse-output.ts";
+import {
+  parseProviderOutput,
+  ProviderReportedFailure,
+  reportedModelMatches,
+} from "./parse-output.ts";
 import type {
   Provider,
   ReceiptStatus,
@@ -428,6 +432,7 @@ function statusExitCode(status: ReceiptStatus): number {
     case "child-failed":
       return 70;
     case "unauthenticated":
+    case "permission-cancelled":
       return 77;
     case "timed-out":
       return 124;
@@ -828,20 +833,33 @@ async function executeLane(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     removeIfExists(options.outputPath);
-    receipt = completeReceipt(options, {
-      ...base,
-      status: "malformed-output",
-      reportedModel: null,
-      modelVerified: false,
-      modelEvidence: null,
-      sessionId: null,
-      usage: null,
-      costUsd: null,
-      error: {
-        message,
-        evidence: evidence(`${result.stderr}\n${result.stdout}`),
-      },
-    });
+    if (error instanceof ProviderReportedFailure) {
+      const proof = modelProof(options.provider, options.model, error.metadata.reportedModel);
+      receipt = completeReceipt(options, {
+        ...base,
+        status: error.status,
+        ...proof,
+        sessionId: error.metadata.sessionId,
+        usage: error.metadata.usage,
+        costUsd: error.metadata.costUsd,
+        error: { message, evidence: evidence(error.evidence) },
+      });
+    } else {
+      receipt = completeReceipt(options, {
+        ...base,
+        status: "malformed-output",
+        reportedModel: null,
+        modelVerified: false,
+        modelEvidence: null,
+        sessionId: null,
+        usage: null,
+        costUsd: null,
+        error: {
+          message,
+          evidence: evidence(`${result.stderr}\n${result.stdout}`),
+        },
+      });
+    }
   }
 
   writeReceipt(options.receiptPath, receipt);

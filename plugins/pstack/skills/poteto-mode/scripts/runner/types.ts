@@ -29,6 +29,7 @@ export type ReceiptStatus =
   | "unavailable-model"
   | "timed-out"
   | "child-failed"
+  | "permission-cancelled"
   | "malformed-output";
 
 export interface NormalizedUsage {

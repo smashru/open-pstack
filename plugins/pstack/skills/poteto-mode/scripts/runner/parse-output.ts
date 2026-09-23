@@ -10,6 +10,19 @@ import {
 
 type JsonObject = Record<string, unknown>;
 
+export class ProviderReportedFailure extends Error {
+  constructor(
+    message: string,
+    readonly status: "permission-cancelled" | "child-failed",
+    readonly evidence: string,
+    readonly metadata: Omit<ParsedOutput, "text">
+  ) {
+    super(message);
+  }
+}
+
+const GROK_PERMISSION_CANCELLED = /User cancelled the execution for tool `([^`]+)`/;
+
 function object(value: unknown): JsonObject | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonObject)
@@ -84,8 +97,21 @@ function parseClaude(stdout: string, requestedModel: string): ParsedOutput {
   };
 }
 
+function cancelledGrokToolResult(event: JsonObject): string | null {
+  const content = object(event.message)?.content;
+  if (!Array.isArray(content)) return null;
+  const block = content.find((item) => {
+    const toolResult = object(item);
+    return toolResult?.type === "tool_result"
+      && GROK_PERMISSION_CANCELLED.test(JSON.stringify(toolResult.content));
+  });
+  return block === undefined ? null : JSON.stringify(block);
+}
+
 function parseGrok(stdout: string, requestedModel: string): ParsedOutput {
   let result: JsonObject | null = null;
+  let resultLine = "";
+  let cancelledToolResult: string | null = null;
   for (const line of stdout.split("\n")) {
     if (line.trim().length === 0) continue;
     let raw: unknown;
@@ -95,23 +121,43 @@ function parseGrok(stdout: string, requestedModel: string): ParsedOutput {
       throw new Error("grok emitted a non-JSON event");
     }
     const event = object(raw);
-    if (event?.type === "result") result = event;
+    if (event?.type === "result") {
+      result = event;
+      resultLine = line;
+    }
+    if (event?.type === "user") {
+      cancelledToolResult = cancelledGrokToolResult(event) ?? cancelledToolResult;
+    }
   }
 
   if (result === null) throw new Error("grok result did not contain a terminal event");
-  if (result.is_error === true || result.subtype !== "success") {
-    throw new Error("grok reported an error result");
-  }
-  const text = nullableString(result.result);
-  if (text === null) throw new Error("grok result did not contain final text");
-
-  return {
-    text,
+  const metadata = {
     reportedModel: modelFromUsage(result.modelUsage, "grok", requestedModel),
     sessionId: nullableString(result.session_id),
     usage: normalizedUsage(result.usage),
     costUsd: finiteNumber(result.total_cost_usd) ?? null,
   };
+  if (result.is_error === true || result.subtype !== "success") {
+    if (result.stop_reason === "cancelled" && cancelledToolResult !== null) {
+      const tool = GROK_PERMISSION_CANCELLED.exec(cancelledToolResult)?.[1];
+      throw new ProviderReportedFailure(
+        `grok cancelled ${tool} at a permission prompt it cannot show headless`,
+        "permission-cancelled",
+        `${cancelledToolResult}\n${resultLine}`,
+        metadata
+      );
+    }
+    throw new ProviderReportedFailure(
+      "grok reported an error result",
+      "child-failed",
+      resultLine,
+      metadata
+    );
+  }
+  const text = nullableString(result.result);
+  if (text === null) throw new Error("grok result did not contain final text");
+
+  return { text, ...metadata };
 }
 
 function parseCodex(stdout: string): ParsedOutput {
