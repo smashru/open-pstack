@@ -51,7 +51,7 @@ function grokSandbox(mode: AccessMode): string {
 }
 
 function grokTools(mode: AccessMode): string {
-  const readonly = ["read_file", "grep", "list_dir", "run_terminal_command"];
+  const readonly = ["read_file", "grep", "list_dir", "run_terminal_cmd"];
   return [...readonly, ...(mode === "isolated-write" ? ["search_replace"] : [])].join(",");
 }
 
