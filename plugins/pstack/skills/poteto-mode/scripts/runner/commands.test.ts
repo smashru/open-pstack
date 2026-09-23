@@ -100,7 +100,7 @@ describe("invocationCommand", () => {
       "--sandbox",
       "read-only",
       "--tools",
-      "read_file,grep,list_dir,run_terminal_cmd",
+      "read_file,grep,list_dir,run_terminal_command",
       "--disallowed-tools",
       "Agent,search_tool,use_tool",
       "--output-format",
@@ -125,13 +125,16 @@ describe("invocationCommand", () => {
       expect.arrayContaining([
         "--permission-mode",
         "acceptEdits",
+        "--allow",
+        "Bash",
         "--sandbox",
         "workspace",
         "--tools",
-        "read_file,grep,list_dir,run_terminal_cmd,search_replace",
+        "read_file,grep,list_dir,run_terminal_command,search_replace",
       ])
     );
     expect(grok.args).not.toContain("--always-approve");
+    expect(grok.args).not.toContain("bypassPermissions");
 
     const claude = invocationCommand(
       options({ provider: "claude", model: "fable", mode: "isolated-write" })
@@ -144,6 +147,18 @@ describe("invocationCommand", () => {
         "Read,Write,Edit,Grep,Glob,Bash",
       ])
     );
+  });
+
+  it("pre-approves Grok shell commands only for writers", () => {
+    const reader = invocationCommand(
+      options({ provider: "grok", model: "grok-4.6", mode: "read-only" })
+    );
+    expect(reader.args).not.toContain("--allow");
+    const writer = invocationCommand(
+      options({ provider: "grok", model: "grok-4.6", mode: "isolated-write" })
+    );
+    expect(writer.args.filter((arg) => arg === "--allow")).toHaveLength(1);
+    expect(writer.args[writer.args.indexOf("--allow") + 1]).toBe("Bash");
   });
 
   it("covers low, medium, and high for every external provider", () => {

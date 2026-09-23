@@ -133,4 +133,26 @@ describe("parseProviderOutput", () => {
       )
     ).toThrow("final agent message");
   });
+
+  it("reports a Grok error result as a provider failure, not malformed output", () => {
+    const stdout = JSON.stringify({
+      type: "result",
+      subtype: "error_during_execution",
+      is_error: true,
+      stop_reason: "end_turn",
+      session_id: "grok-session",
+      modelUsage: { "grok-4.6-build": {} },
+    });
+    let thrown: unknown;
+    try {
+      parseProviderOutput("grok", stdout, "", "grok-4.6");
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({
+      status: "child-failed",
+      evidence: stdout,
+      metadata: { reportedModel: "grok-4.6-build", sessionId: "grok-session" },
+    });
+  });
 });
