@@ -945,21 +945,49 @@ describe("childEnvironment", () => {
       CLAUDE_CODE_CHILD_SESSION: "1",
       KEEP_ME: "yes",
     };
-    expect(childEnvironment("claude", source)).toEqual({
+    expect(childEnvironment("claude", "isolated-write", source)).toEqual({
       PATH: "/bin",
       CLAUDECODE: "1",
       CLAUDE_CODE_CHILD_SESSION: "1",
       KEEP_ME: "yes",
     });
-    expect(childEnvironment("codex", source)).toEqual({
+    expect(childEnvironment("codex", "isolated-write", source)).toEqual({
       PATH: "/bin",
       CODEX_THREAD_ID: "codex",
       CODEX_CI: "1",
       KEEP_ME: "yes",
     });
-    expect(childEnvironment("grok", source)).toEqual({
+    expect(childEnvironment("grok", "read-only", source)).toEqual({
       PATH: "/bin",
       KEEP_ME: "yes",
+    });
+  });
+
+  it("passes a Grok writer, whose shell is pre-approved, only an allowlisted environment", () => {
+    const source = {
+      PATH: "/bin",
+      HOME: "/home/dev",
+      TMPDIR: "/tmp/dev",
+      LANG: "en_US.UTF-8",
+      LC_ALL: "en_US.UTF-8",
+      HTTPS_PROXY: "http://proxy:8080",
+      GROK_HOME: "/home/dev/.grok",
+      XAI_API_KEY: "xai-key",
+      GH_TOKEN: "gh-secret",
+      AWS_SECRET_ACCESS_KEY: "aws-secret",
+      SSH_AUTH_SOCK: "/tmp/agent.sock",
+      CLAUDECODE: "1",
+      KEEP_ME: "yes",
+    };
+    expect(childEnvironment("grok", "isolated-write", source)).toEqual({
+      PATH: "/bin",
+      HOME: "/home/dev",
+      TMPDIR: "/tmp/dev",
+      LANG: "en_US.UTF-8",
+      LC_ALL: "en_US.UTF-8",
+      HTTPS_PROXY: "http://proxy:8080",
+      GROK_HOME: "/home/dev/.grok",
+      XAI_API_KEY: "xai-key",
     });
   });
 });
