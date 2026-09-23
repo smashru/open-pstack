@@ -100,7 +100,7 @@ describe("invocationCommand", () => {
       "--sandbox",
       "read-only",
       "--tools",
-      "read_file,grep,list_dir,run_terminal_command",
+      "read_file,grep,list_dir,run_terminal_cmd",
       "--disallowed-tools",
       "Agent,search_tool,use_tool",
       "--output-format",
@@ -130,7 +130,7 @@ describe("invocationCommand", () => {
         "--sandbox",
         "workspace",
         "--tools",
-        "read_file,grep,list_dir,run_terminal_command,search_replace",
+        "read_file,grep,list_dir,run_terminal_cmd,search_replace",
       ])
     );
     expect(grok.args).not.toContain("--always-approve");
