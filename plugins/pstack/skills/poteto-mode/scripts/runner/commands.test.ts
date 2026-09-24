@@ -97,6 +97,8 @@ describe("invocationCommand", () => {
       "xhigh",
       "--permission-mode",
       "plan",
+      "--allow",
+      "Bash",
       "--sandbox",
       "read-only",
       "--tools",

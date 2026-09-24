@@ -56,7 +56,9 @@ function grokTools(mode: AccessMode): string {
 }
 
 function grokPermissionRules(mode: AccessMode): readonly string[] {
-  return mode === "isolated-write" ? ["--allow", "Bash", "--allow", "Edit"] : [];
+  return mode === "isolated-write"
+    ? ["--allow", "Bash", "--allow", "Edit"]
+    : ["--allow", "Bash"];
 }
 
 function permissionMode(mode: AccessMode): string {
