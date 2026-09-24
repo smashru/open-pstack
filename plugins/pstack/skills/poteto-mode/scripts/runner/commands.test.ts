@@ -97,12 +97,10 @@ describe("invocationCommand", () => {
       "xhigh",
       "--permission-mode",
       "plan",
-      "--allow",
-      "Bash",
       "--sandbox",
       "read-only",
       "--tools",
-      "read_file,grep,list_dir,run_terminal_cmd",
+      "read_file,grep,list_dir",
       "--disallowed-tools",
       "Agent,search_tool,use_tool",
       "--output-format",
@@ -151,14 +149,11 @@ describe("invocationCommand", () => {
     );
   });
 
-  it("pre-approves Grok shell reads and writer file edits", () => {
+  it("keeps Grok readers file-only and pre-approves writer tools", () => {
     const reader = invocationCommand(
       options({ provider: "grok", model: "grok-4.6", mode: "read-only" })
     );
-    const readerRules = reader.args.flatMap((arg, index) =>
-      arg === "--allow" ? [reader.args[index + 1]] : []
-    );
-    expect(readerRules).toEqual(["Bash"]);
+    expect(reader.args).not.toContain("--allow");
     const writer = invocationCommand(
       options({ provider: "grok", model: "grok-4.6", mode: "isolated-write" })
     );

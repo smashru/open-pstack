@@ -134,7 +134,7 @@ const CLAUDE_IDENTITY = [
   "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
 ] as const;
 
-const GROK_ENV = new Set([
+const GROK_WRITER_ENV = new Set([
   "PATH",
   "HOME",
   "USER",
@@ -158,11 +158,11 @@ const GROK_ENV = new Set([
   "NODE_EXTRA_CA_CERTS",
 ]);
 
-const GROK_ENV_PREFIXES = ["LC_", "XDG_", "GROK_", "XAI_"] as const;
+const GROK_WRITER_ENV_PREFIXES = ["LC_", "XDG_", "GROK_", "XAI_"] as const;
 
-function grokInherits(key: string): boolean {
-  return GROK_ENV.has(key)
-    || GROK_ENV_PREFIXES.some((prefix) => key.startsWith(prefix));
+function grokWriterInherits(key: string): boolean {
+  return GROK_WRITER_ENV.has(key)
+    || GROK_WRITER_ENV_PREFIXES.some((prefix) => key.startsWith(prefix));
 }
 
 export function childEnvironment(
@@ -170,9 +170,9 @@ export function childEnvironment(
   mode: AccessMode,
   source: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
-  if (provider === "grok") {
+  if (provider === "grok" && mode === "isolated-write") {
     return Object.fromEntries(
-      Object.entries(source).filter(([key]) => grokInherits(key))
+      Object.entries(source).filter(([key]) => grokWriterInherits(key))
     );
   }
   const result = { ...source };

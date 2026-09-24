@@ -51,14 +51,12 @@ function grokSandbox(mode: AccessMode): string {
 }
 
 function grokTools(mode: AccessMode): string {
-  const readonly = ["read_file", "grep", "list_dir", "run_terminal_cmd"];
-  return [...readonly, ...(mode === "isolated-write" ? ["search_replace", "write"] : [])].join(",");
+  const readonly = ["read_file", "grep", "list_dir"];
+  return [...readonly, ...(mode === "isolated-write" ? ["run_terminal_cmd", "search_replace", "write"] : [])].join(",");
 }
 
 function grokPermissionRules(mode: AccessMode): readonly string[] {
-  return mode === "isolated-write"
-    ? ["--allow", "Bash", "--allow", "Edit"]
-    : ["--allow", "Bash"];
+  return mode === "isolated-write" ? ["--allow", "Bash", "--allow", "Edit"] : [];
 }
 
 function permissionMode(mode: AccessMode): string {
